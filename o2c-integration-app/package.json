@@ -1,0 +1,23 @@
+{
+  "name": "o2c-integration-app",
+  "version": "1.0.0",
+  "description": "Order-to-Cash Integration: IBM MQ to SAP to Kafka",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": ["ibm-mq", "kafka", "sap", "order-to-cash"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ibmmq": "^0.9.25",
+    "kafkajs": "^2.2.4",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "mock-sap-server",
+  "version": "1.0.0",
+  "description": "Mock SAP server simulating order-to-cash processes",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": ["sap", "mock", "order-to-cash"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
