@@ -5,8 +5,8 @@ Order-to-Cash integration application that bridges IBM MQ, SAP, and Kafka for se
 ## Architecture
 
 ```
-IBM MQ Queue                    SAP Mock Server              Kafka Topic
-(customer_purchase_orders) --> (Sales Order API) --> (submitted_orders)
+IBM MQ Queue                    SAP Mock Server              Kafka Topics
+(customer_purchase_orders) --> (Sales Order API) --> (submitted_orders / failed_orders)
 ```
 
 **Flow:**
@@ -51,7 +51,9 @@ cp .env.example .env
 Key configurations:
 - **MQ_QUEUE_NAME**: IBM MQ queue name (default: `customer_purchase_orders`)
 - **SAP_BASE_URL**: Mock SAP server URL (default: `http://localhost:3001`)
-- **KAFKA_TOPIC**: Kafka topic for events (default: `submitted_orders`)
+- **KAFKA_BROKERS**: Kafka broker address (default: `localhost:9093`)
+- **KAFKA_SUCCESS_TOPIC**: Success events topic (default: `submitted_orders`)
+- **KAFKA_FAILED_TOPIC**: Failed events topic (default: `failed_orders`)
 - **POLL_INTERVAL_MS**: Polling interval (default: 5000ms)
 - **MAX_RETRIES**: SAP API retry attempts (default: 3)
 
@@ -65,8 +67,10 @@ docker-compose up -d
 
 This starts:
 - IBM MQ on port 1414 (Web Console: 9443)
-- Kafka on port 9092
+- Kafka on port 9093
 - Zookeeper on port 2181
+
+**Note:** Port 9093 is used to avoid conflicts with other Kafka instances.
 
 ### Create MQ Queue
 
@@ -76,9 +80,9 @@ Access IBM MQ Web Console at `https://localhost:9443`:
 
 Create queue named `customer_purchase_orders` or use the default DEV queues.
 
-### Verify Kafka Topic
+### Verify Kafka Topics
 
-The topic `submitted_orders` will be auto-created on first message.
+Topics `submitted_orders` and `failed_orders` will be auto-created on first message.
 
 ## Usage
 
