@@ -3,11 +3,10 @@ require('dotenv').config();
 module.exports = {
   mq: {
     host: process.env.MQ_HOST || 'localhost',
-    port: parseInt(process.env.MQ_PORT) || 1414,
+    restPort: parseInt(process.env.MQ_REST_PORT) || 9443,
     queueManager: process.env.MQ_QUEUE_MANAGER || 'QM1',
-    channel: process.env.MQ_CHANNEL || 'DEV.APP.SVRCONN',
     queueName: process.env.MQ_QUEUE_NAME || 'customer_purchase_orders',
-    user: process.env.MQ_USER || 'app',
+    user: process.env.MQ_USER || 'admin',
     password: process.env.MQ_PASSWORD || 'passw0rd'
   },
   

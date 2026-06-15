@@ -1,68 +1,52 @@
-const mq = require('ibmmq');
-const MQC = mq.MQC;
+const axios = require('axios');
 const config = require('./config');
 const logger = require('./logger');
 
 class MQConsumer {
   constructor() {
-    this.qMgr = null;
-    this.queueObj = null;
+    this.baseUrl = `https://localhost:${config.mq.restPort}`;
+    this.queueUrl = `${this.baseUrl}/ibmmq/rest/v2/messaging/qmgr/${config.mq.queueManager}/queue/${config.mq.queueName}/message`;
     this.connected = false;
+    this.auth = Buffer.from(`${config.mq.user}:${config.mq.password}`).toString('base64');
+    
+    // Configure axios to accept self-signed certificates
+    this.axiosInstance = axios.create({
+      httpsAgent: new (require('https').Agent)({
+        rejectUnauthorized: false
+      }),
+      headers: {
+        'Authorization': `Basic ${this.auth}`,
+        'ibm-mq-rest-csrf-token': 'value',
+        'Content-Type': 'text/plain'
+      }
+    });
   }
 
   async connect() {
-    return new Promise((resolve, reject) => {
-      const cno = new mq.MQCNO();
-      const cd = new mq.MQCD();
-      
-      cd.ConnectionName = `${config.mq.host}(${config.mq.port})`;
-      cd.ChannelName = config.mq.channel;
-      
-      const csp = new mq.MQCSP();
-      csp.UserId = config.mq.user;
-      csp.Password = config.mq.password;
-      
-      cno.ClientConn = cd;
-      cno.SecurityParms = csp;
-      cno.Options = MQC.MQCNO_CLIENT_BINDING;
-
-      logger.info('Connecting to IBM MQ...', {
-        host: config.mq.host,
-        port: config.mq.port,
-        queueManager: config.mq.queueManager
+    try {
+      logger.info('Connecting to IBM MQ REST API...', {
+        baseUrl: this.baseUrl,
+        queueManager: config.mq.queueManager,
+        queue: config.mq.queueName
       });
 
-      mq.Connx(config.mq.queueManager, cno, (err, hConn) => {
-        if (err) {
-          logger.error('Failed to connect to MQ', { error: err.message });
-          return reject(err);
-        }
+      // Test connection by checking queue manager status
+      const response = await this.axiosInstance.get(
+        `${this.baseUrl}/ibmmq/rest/v2/admin/qmgr/${config.mq.queueManager}`
+      );
 
-        this.qMgr = hConn;
-        logger.info('Connected to IBM MQ successfully');
-
-        const od = new mq.MQOD();
-        od.ObjectName = config.mq.queueName;
-        od.ObjectType = MQC.MQOT_Q;
-
-        const openOptions = MQC.MQOO_INPUT_AS_Q_DEF | MQC.MQOO_FAIL_IF_QUIESCING;
-
-        mq.Open(hConn, od, openOptions, (err, hObj) => {
-          if (err) {
-            logger.error('Failed to open queue', { 
-              queue: config.mq.queueName,
-              error: err.message 
-            });
-            return reject(err);
-          }
-
-          this.queueObj = hObj;
-          this.connected = true;
-          logger.info('Queue opened successfully', { queue: config.mq.queueName });
-          resolve();
-        });
+      if (response.status === 200) {
+        this.connected = true;
+        logger.info('Connected to IBM MQ REST API successfully');
+        return true;
+      }
+    } catch (error) {
+      logger.error('Failed to connect to MQ REST API', { 
+        error: error.message,
+        response: error.response?.data
       });
-    });
+      throw error;
+    }
   }
 
   async getMessage() {
@@ -70,72 +54,48 @@ class MQConsumer {
       throw new Error('Not connected to MQ');
     }
 
-    return new Promise((resolve, reject) => {
-      const md = new mq.MQMD();
-      const gmo = new mq.MQGMO();
-      
-      gmo.Options = MQC.MQGMO_NO_SYNCPOINT |
-                    MQC.MQGMO_WAIT |
-                    MQC.MQGMO_CONVERT |
-                    MQC.MQGMO_FAIL_IF_QUIESCING;
-      gmo.WaitInterval = 3000; // 3 seconds
-
-      mq.Get(this.queueObj, md, gmo, (err, hObj, gmo, md, buf) => {
-        if (err) {
-          if (err.mqrc === MQC.MQRC_NO_MSG_AVAILABLE) {
-            return resolve(null); // No message available
-          }
-          logger.error('Error getting message from queue', { error: err.message });
-          return reject(err);
-        }
-
-        try {
-          const message = buf.toString('utf8');
-          logger.info('Message received from MQ', { 
-            messageId: md.MsgId.toString('hex'),
-            length: message.length 
-          });
-          resolve(message);
-        } catch (parseErr) {
-          logger.error('Error parsing message', { error: parseErr.message });
-          reject(parseErr);
+    try {
+      const response = await this.axiosInstance.delete(this.queueUrl, {
+        headers: {
+          'ibm-mq-md-wait': '3000' // Wait 3 seconds for message
         }
       });
-    });
+
+      if (response.status === 200 && response.data) {
+        const message = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+        
+        logger.info('Message received from MQ', { 
+          messageId: response.headers['ibm-mq-md-messageid'],
+          length: message.length 
+        });
+        
+        return message;
+      }
+      
+      return null; // No message available
+    } catch (error) {
+      if (error.response?.status === 404) {
+        // No message available (queue empty)
+        return null;
+      }
+      
+      logger.error('Error getting message from queue', { 
+        error: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+      
+      throw error;
+    }
   }
 
   async disconnect() {
-    return new Promise((resolve) => {
-      if (this.queueObj) {
-        mq.Close(this.queueObj, 0, (err) => {
-          if (err) {
-            logger.warn('Error closing queue', { error: err.message });
-          } else {
-            logger.info('Queue closed');
-          }
-          this.queueObj = null;
-        });
-      }
-
-      if (this.qMgr) {
-        mq.Disc(this.qMgr, (err) => {
-          if (err) {
-            logger.warn('Error disconnecting from MQ', { error: err.message });
-          } else {
-            logger.info('Disconnected from IBM MQ');
-          }
-          this.qMgr = null;
-          this.connected = false;
-          resolve();
-        });
-      } else {
-        resolve();
-      }
-    });
+    this.connected = false;
+    logger.info('Disconnected from IBM MQ REST API');
   }
 
   async reconnect() {
-    logger.info('Attempting to reconnect to MQ...');
+    logger.info('Attempting to reconnect to MQ REST API...');
     await this.disconnect();
     await new Promise(resolve => setTimeout(resolve, config.app.retryDelayMs));
     await this.connect();
