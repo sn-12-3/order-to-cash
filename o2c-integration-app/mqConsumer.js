@@ -1,4 +1,5 @@
 const axios = require('axios');
+const https = require('https');
 const config = require('./config');
 const logger = require('./logger');
 
@@ -10,15 +11,19 @@ class MQConsumer {
     this.auth = Buffer.from(`${config.mq.user}:${config.mq.password}`).toString('base64');
     
     // Configure axios to accept self-signed certificates
+    const httpsAgent = new https.Agent({
+      rejectUnauthorized: false,
+      keepAlive: true
+    });
+    
     this.axiosInstance = axios.create({
-      httpsAgent: new (require('https').Agent)({
-        rejectUnauthorized: false
-      }),
+      httpsAgent: httpsAgent,
       headers: {
         'Authorization': `Basic ${this.auth}`,
         'ibm-mq-rest-csrf-token': 'value',
         'Content-Type': 'text/plain'
-      }
+      },
+      timeout: 10000
     });
   }
 
