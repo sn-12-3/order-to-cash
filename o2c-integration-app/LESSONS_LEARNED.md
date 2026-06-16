@@ -200,31 +200,7 @@ docker-compose up -d
 
 ---
 
-## 7. User Confusion: Where Does App Run? 🤔
-
-### Problem
-User attempted running `npm start` on macOS, encountered MQ library errors, and was confused about where the application should execute.
-
-### Root Cause
-- Misunderstanding that integration app runs **inside Docker container automatically**
-- Documentation didn't clearly explain Docker-based execution model
-- User expected traditional Node.js local development workflow
-
-### Solution
-1. **Clear documentation** stating app runs in Docker
-2. **Explicit instructions**: `docker-compose up -d` starts ALL services including app
-3. **Architecture diagram** showing containerized components
-4. **Troubleshooting section** for common misconceptions
-
-### Key Takeaways
-✅ **Explicitly document Docker-based architecture**  
-✅ **Explain execution model upfront** - no local `npm start`  
-✅ **Provide architecture diagrams** for visual clarity  
-✅ **Add "Common Mistakes" section** to documentation
-
----
-
-## 8. Queue Name Case Sensitivity 🔤
+## 7. Queue Name Case Sensitivity 🔤
 
 ### Problem
 Queue operations failed with "Queue not found" despite queue existing in MQ.
@@ -248,7 +224,7 @@ const queueName = 'CUSTOMER_PURCHASE_ORDERS';  // Always uppercase
 
 ---
 
-## 9. MQ Web Console Authentication 🔐
+## 8. MQ Web Console Authentication 🔐
 
 ### Problem
 Web console login failed with correct credentials (admin/passw0rd).
@@ -273,7 +249,7 @@ Use container's default authentication:
 
 ---
 
-## 10. Docker Compose Service Dependencies ⏱️
+## 9. Docker Compose Service Dependencies ⏱️
 
 ### Problem
 Integration app started before Kafka was ready, causing connection failures.
@@ -301,7 +277,7 @@ depends_on:
 ✅ **Test startup sequence** with `docker-compose up -d --force-recreate`  
 ✅ **Add retry logic** in application code as backup
 
-## 11. IBM MQ REST API JAR File Issues 📦
+## 10. IBM MQ REST API JAR File Issues 📦
 
 ### Problem
 When attempting to use IBM MQ REST API, encountered issues with missing or incompatible JAR files for the REST API client.
