@@ -7,13 +7,19 @@
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
-  "keywords": ["ibm-mq", "kafka", "sap", "order-to-cash"],
+  "keywords": [
+    "ibm-mq",
+    "kafka",
+    "sap",
+    "order-to-cash"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "kafkajs": "^2.2.4",
     "axios": "^1.6.0",
     "dotenv": "^16.3.1",
+    "ibmmq": "^2.1.8",
+    "kafkajs": "^2.2.4",
     "winston": "^3.11.0"
   },
   "devDependencies": {

@@ -150,7 +150,9 @@ class KafkaProducer {
         error: error.message,
         orderNumber: event.orderNumber
       });
-      // Don't throw - failure to log shouldn't stop processing
+      // Re-throw to notify caller that failure tracking failed
+      // This is critical for audit trail and should not be silently ignored
+      throw new Error(`Failed to publish failure event: ${error.message}`);
     }
   }
 

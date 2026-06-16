@@ -14,6 +14,8 @@ class O2CIntegrationApp {
     this.running = false;
     this.processedCount = 0;
     this.errorCount = 0;
+    this.processingCount = 0;
+    this.maxConcurrent = parseInt(process.env.MAX_CONCURRENT_MESSAGES) || 10;
   }
 
   async initialize() {
@@ -135,17 +137,32 @@ class O2CIntegrationApp {
     this.running = true;
     logger.info('Starting message polling loop', {
       pollInterval: config.app.pollIntervalMs,
-      queue: config.mq.queueName
+      queue: config.mq.queueName,
+      maxConcurrent: this.maxConcurrent
     });
 
     while (this.running) {
       try {
+        // Check if we've reached max concurrent processing limit
+        if (this.processingCount >= this.maxConcurrent) {
+          logger.debug('Max concurrent limit reached, waiting...', {
+            processing: this.processingCount,
+            max: this.maxConcurrent
+          });
+          await new Promise(resolve => setTimeout(resolve, 100));
+          continue;
+        }
+
         // Get message from MQ
         const message = await this.mqConsumer.getMessage();
 
         if (message) {
-          // Process the message
-          await this.processMessage(message);
+          // Process the message asynchronously without blocking
+          this.processingCount++;
+          this.processMessage(message)
+            .finally(() => {
+              this.processingCount--;
+            });
         } else {
           // No message available, wait before next poll
           await new Promise(resolve => setTimeout(resolve, config.app.pollIntervalMs));
@@ -166,6 +183,14 @@ class O2CIntegrationApp {
           await new Promise(resolve => setTimeout(resolve, config.app.retryDelayMs));
         }
       }
+    }
+
+    // Wait for all in-flight messages to complete
+    logger.info('Waiting for in-flight messages to complete...', {
+      processing: this.processingCount
+    });
+    while (this.processingCount > 0) {
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     logger.info('Polling loop stopped');
@@ -204,14 +229,24 @@ async function main() {
   // Handle graceful shutdown
   process.on('SIGINT', async () => {
     logger.info('Received SIGINT signal');
-    await app.stop();
-    process.exit(0);
+    try {
+      await app.stop();
+    } catch (error) {
+      logger.error('Error during shutdown', { error: error.message });
+    } finally {
+      process.exit(0);
+    }
   });
 
   process.on('SIGTERM', async () => {
     logger.info('Received SIGTERM signal');
-    await app.stop();
-    process.exit(0);
+    try {
+      await app.stop();
+    } catch (error) {
+      logger.error('Error during shutdown', { error: error.message });
+    } finally {
+      process.exit(0);
+    }
   });
 
   // Handle uncaught errors
@@ -231,9 +266,12 @@ async function main() {
     logger.info('='.repeat(60));
     logger.info('O2C Integration Application Started');
     logger.info('='.repeat(60));
+    // Sanitize configuration to avoid logging sensitive data
+    const sanitizedSapUrl = config.sap.baseUrl.replace(/\/\/([^:]+):([^@]+)@/, '//$1:***@');
+    
     logger.info('Configuration:', {
       mqQueue: config.mq.queueName,
-      sapUrl: config.sap.baseUrl,
+      sapUrl: sanitizedSapUrl,
       kafkaSuccessTopic: config.kafka.successTopic,
       kafkaFailedTopic: config.kafka.failedTopic,
       pollInterval: config.app.pollIntervalMs

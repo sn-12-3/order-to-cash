@@ -1,0 +1,82 @@
+[
+  {
+  "orderNumber": "ORD-12345",
+  "customerNumber": "CUST-001",
+  "totalAmount": 5000,
+  "items": [
+    {
+      "materialNumber": "MAT-001",
+      "quantity": 10,
+      "plant": "P001"
+    }
+  ]
+  },
+  {
+  "orderNumber": "ORD-67890",
+  "customerNumber": "CUST-002",
+  "totalAmount": 5000,
+  "items": [
+    {
+      "materialNumber": "MAT-001",
+      "quantity": 10,
+      "plant": "P001"
+    },
+    {
+      "materialNumber": "MAT-002",
+      "quantity": 10,
+      "plant": "P002"
+    }
+  ]
+  },
+  {
+  "orderNumber": "ORD-01234",
+  "customerNumber": "CUST-003",
+  "totalAmount": 500000,
+  "items": [
+    {
+      "materialNumber": "MAT-004",
+      "quantity": 10,
+      "plant": "P020"
+    },
+    {
+      "materialNumber": "MAT-005",
+      "quantity": 10,
+      "plant": "P019"
+    }
+  ]
+  },
+  {
+  "orderNumber": "ORD-2011",
+  "customerNumber": "CUST-004",
+  "totalAmount": 500000,
+  "items": [
+    {
+      "materialNumber": "MAT-008",
+      "quantity": 10,
+      "plant": "P020"
+    },
+    {
+      "materialNumber": "MAT-009",
+      "quantity": 10,
+      "plant": "P019"
+    }
+  ]
+  },
+  {
+  "orderNumber": "ORD-01234",
+  "customerNumber": "CUST-005",
+  "totalAmount": 5000000,
+  "items": [
+    {
+      "materialNumber": "MAT-020",
+      "quantity": 10,
+      "plant": "P020"
+    },
+    {
+      "materialNumber": "MAT-011",
+      "quantity": 10,
+      "plant": "P019"
+    }
+  ]
+  }
+]
