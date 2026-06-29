@@ -4,6 +4,9 @@ const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
 
+// In-memory store for created sales orders
+const salesOrders = [];
+
 // Validation helpers
 const validatePayload = (data) => {
   const errors = [];
@@ -78,12 +81,14 @@ app.post('/sap/api/sales-order', (req, res) => {
   
   // Success response (200)
   const sapOrderNumber = `SAP-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-  res.status(200).json({
-    success: true,
+  const order = {
     sapOrderNumber,
     orderNumber: payload.orderNumber,
+    customerNumber: payload.customerNumber,
+    totalAmount: payload.totalAmount ?? null,
     status: 'CREATED',
     message: 'Sales order created successfully in SAP',
+    createdAt: new Date().toISOString(),
     deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     items: payload.items.map((item, idx) => ({
       lineItem: (idx + 1) * 10,
@@ -92,6 +97,30 @@ app.post('/sap/api/sales-order', (req, res) => {
       plant: item.plant,
       status: 'CONFIRMED'
     }))
+  };
+  salesOrders.push(order);
+  res.status(200).json({ success: true, ...order });
+});
+
+// SAP Get Sales Orders Endpoint
+app.get('/sap/api/sales-orders', (req, res) => {
+  const { customerNumber, status, sapOrderNumber } = req.query;
+  let result = salesOrders;
+
+  if (customerNumber) {
+    result = result.filter(o => o.customerNumber === customerNumber);
+  }
+  if (status) {
+    result = result.filter(o => o.status === status);
+  }
+  if (sapOrderNumber) {
+    result = result.filter(o => o.sapOrderNumber === sapOrderNumber);
+  }
+
+  res.status(200).json({
+    success: true,
+    total: result.length,
+    orders: result
   });
 });
 
@@ -266,6 +295,7 @@ app.listen(PORT, () => {
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log('\nAvailable endpoints:');
   console.log('  POST /sap/api/sales-order');
+  console.log('  GET  /sap/api/sales-orders');
   console.log('  POST /sap/api/delivery');
   console.log('  POST /sap/api/goods-issue');
   console.log('  POST /sap/api/invoice');
